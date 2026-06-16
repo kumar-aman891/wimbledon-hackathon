@@ -1,0 +1,12 @@
+tourney_level,importance_weight
+G,1.5
+M,1.25
+A,1.0
+I,1.15
+P,1.15
+PM,1.2
+D,0.75
+F,0.5
+O,0.5
+50+H,0.25
+35+H,0.25
