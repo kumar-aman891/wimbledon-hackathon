@@ -202,7 +202,11 @@ def build_recent_form():
             grass_history[loser_id].append(0)
 
     recent_form = pd.DataFrame(records)
-
+    recent_form["player_key"] = (
+    recent_form["tour"]
+    + "_"
+    + recent_form["player_id"].astype(str)
+    )
     recent_form.to_parquet(
         OUTPUT_FILE,
         index=False
