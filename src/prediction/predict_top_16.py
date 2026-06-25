@@ -164,15 +164,10 @@ def clean_participant_display_name(name):
 
     name = str(name).strip()
 
-    # Remove bracket text like (USA), (CZE), etc.
     name = re.sub(r"\s*\([^)]*\)\s*", " ", name)
-
-    # Remove entry suffixes like SR / PR / WC / Q
     name = strip_entry_suffixes(name)
-
     name = re.sub(r"\s+", " ", name).strip()
 
-    # Convert "SABALENKA, Aryna" -> "Aryna Sabalenka"
     if "," in name:
 
         last_name, first_name = name.split(",", 1)
@@ -207,8 +202,6 @@ def build_match_key(name):
         return None
 
     name = str(name).strip().lower()
-
-    # keep only letters + digits for robust matching
     name = re.sub(r"[^a-z0-9]", "", name)
 
     return name
@@ -435,6 +428,7 @@ def create_fallback_profile(
     medians = {}
 
     for col in FALLBACK_NUMERIC_COLUMNS:
+
         if col in tour_snapshot.columns:
             medians[col] = pd.to_numeric(
                 tour_snapshot[col],
@@ -474,11 +468,10 @@ def create_fallback_profile(
     return fallback
 
 
-def build_field_from_participants(
+def preprocess_participants(
     participants_file,
-    snapshot,
-    expected_tour,
-    label
+    label,
+    truncate_after_raw_name=None
 ):
 
     participants = pd.read_csv(participants_file)
@@ -490,7 +483,23 @@ def build_field_from_participants(
 
     participants = participants.copy()
 
-    participants["raw_player_name"] = participants["Player_name"].astype(str)
+    participants["raw_player_name"] = participants["Player_name"].astype(str).str.strip()
+
+    if truncate_after_raw_name is not None:
+
+        marker_clean = str(truncate_after_raw_name).strip()
+
+        marker_idx = participants[
+            participants["raw_player_name"].str.strip() == marker_clean
+        ].index
+
+        if len(marker_idx) == 0:
+            print(
+                f"Warning: truncate marker '{truncate_after_raw_name}' not found in {label} file. Using full file."
+            )
+        else:
+            last_idx = marker_idx[0]
+            participants = participants.loc[:last_idx].copy()
 
     participants["clean_player_name"] = participants["raw_player_name"].apply(
         clean_participant_display_name
@@ -498,6 +507,39 @@ def build_field_from_participants(
 
     participants["participant_match_key"] = participants["clean_player_name"].apply(
         build_match_key
+    )
+
+    participants = participants[
+        participants["participant_match_key"].notna()
+    ].copy()
+
+    before = len(participants)
+
+    participants = participants.drop_duplicates(
+        subset=["participant_match_key"],
+        keep="first"
+    ).reset_index(drop=True)
+
+    after = len(participants)
+
+    print(f"\n{label}: participant rows before dedupe = {before}")
+    print(f"{label}: participant rows after dedupe  = {after}")
+
+    return participants
+
+
+def build_field_from_participants(
+    participants_file,
+    snapshot,
+    expected_tour,
+    label,
+    truncate_after_raw_name=None
+):
+
+    participants = preprocess_participants(
+        participants_file=participants_file,
+        label=label,
+        truncate_after_raw_name=truncate_after_raw_name
     )
 
     participants["alias_snapshot_name"] = participants["participant_match_key"].map(
@@ -516,7 +558,6 @@ def build_field_from_participants(
         snapshot_match_key
     )
 
-    # Pass 1: direct normalized-key match
     matched = participants.merge(
         snapshot_tour,
         left_on="participant_match_key",
@@ -525,7 +566,6 @@ def build_field_from_participants(
         suffixes=("_participant", "")
     )
 
-    # Pass 2: alias-based rescue for unmatched rows
     unmatched_mask = (
         matched["player_name"].isna()
         &
@@ -574,7 +614,6 @@ def build_field_from_participants(
         subset=["player_key"]
     ).reset_index(drop=True)
 
-    # Create fallback profiles for still-unmatched players
     fallback_rows = []
 
     if len(unmatched) > 0:
@@ -712,14 +751,16 @@ def main():
         participants_file=MEN_PARTICIPANTS_FILE,
         snapshot=snapshot,
         expected_tour="ATP",
-        label="MEN"
+        label="MEN",
+        truncate_after_raw_name=None
     )
 
     women_field, women_unmatched = build_field_from_participants(
         participants_file=WOMEN_PARTICIPANTS_FILE,
         snapshot=snapshot,
         expected_tour="WTA",
-        label="WOMEN"
+        label="WOMEN",
+        truncate_after_raw_name="WILLIAMS, Serena (USA)"
     )
 
     print("\nScoring men's field...")
