@@ -1,0 +1,9 @@
+player1,player2,winner,winner_probability,winning_margin,margin_confidence
+Jannik Sinner,Jan Lennard Struff,Jannik Sinner,0.9074,Greater than 1 Set,0.6918
+Novak Djokovic,Felix Auger Aliassime,Novak Djokovic,0.8483,Greater than 1 Set,0.6206
+Jessica Pegula,Coco Gauff,Coco Gauff,0.5145,Exactly 1 Set,0.624
+Naomi Osaka,Karolina Muchova,Naomi Osaka,0.5274,Exactly 1 Set,0.5967
+Marta Kostyuk,Jasmine Paolini,Jasmine Paolini,0.7097,Exactly 1 Set,0.6283
+Linda Noskova,Elise Mertens,Linda Noskova,0.5724,Exactly 1 Set,0.5477
+Flavio Cobolli,Arthur Fery,Flavio Cobolli,0.9188,Greater than 1 Set,0.6236
+Taylor Fritz,Alexander Zverev,Alexander Zverev,0.5098,Exactly 1 Set,0.6459
